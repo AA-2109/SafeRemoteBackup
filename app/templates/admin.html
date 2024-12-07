@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Page</title>
+</head>
+<body>
+    <h1>Welcome to the Admin Page</h1>
+    <p>Your current machine IP address is: {{ ip }}</p>
+
+    <h2>Scan this QR code to access the upload page</h2>
+    <img src="{{ qr_code }}" alt="QR Code to Upload Page">
+
+    <p>URL: <a href="https://{{ ip }}:5000/" target="_blank">https://{{ ip }}:5000/</a></p>
+</body>
+</html>
