@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin_styles.css') }}">
+
 </head>
 <body>
-    <h1>Welcome to the Admin Page</h1>
-
-    <h2>Scan this QR code to access the upload page</h2>
-    <img src="{{ qr_code }}" alt="QR Code to Upload Page">
-
-    <p>URL: <a href="https://{{ ip }}:5000/" target="_blank">https://{{ ip }}:5000/</a></p>
+    <div class="container">
+        <h1>Welcome to the Admin Page</h1>
+        <h2>Scan this QR code to access the upload page</h2>
+        <img src="{{ qr_code }}" alt="QR Code to Upload Page">
+        <p>URL: <a href="https://{{ ip }}:5000/" target="_blank">https://{{ ip }}:5000/</a></p>
+    </div>
 </body>
 </html>
