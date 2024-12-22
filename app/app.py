@@ -55,6 +55,9 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    counter = 0
+    if counter > 5:
+        return render_template('frig-off.html', error="Too much incorrect password, frig off")
     if request.method == 'POST':
         password = request.form['password']
         if bcrypt.check_password_hash(admin_password_hash, password):
@@ -62,6 +65,7 @@ def login():
             session['authenticated'] = True
             return redirect(url_for('index'))
         else:
+            counter+=1
             # Password is incorrect
             return render_template('login.html', error="Invalid password.")
     return render_template('login.html')
