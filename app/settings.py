@@ -1,3 +1,4 @@
+import os
 # Define a folders structure, e.g. :
 # folders_dict = {'folder_name':[set of file extensions that you want to ut inside a folder]}
 
@@ -24,5 +25,5 @@ tls_ciphers = (
 )
 
 strong_password = "HelloWorld123!"
-strong_secret = "superSecret"
+strong_secret = os.urandom(24)
 

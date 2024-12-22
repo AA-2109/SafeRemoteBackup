@@ -1,7 +1,7 @@
 import os
 import ssl
 from datetime import date
-
+from datetime import timedelta
 import qrcode
 from flask import Flask, request, render_template, redirect, url_for, session
 from flask_bcrypt import Bcrypt
@@ -15,12 +15,18 @@ STRONG_CIPHERS = settings.tls_ciphers
 STRONG_PASSWORD = settings.strong_password
 STRONG_SECRET = settings.strong_secret
 
-app = Flask(__name__)
 
+app = Flask(__name__)
 app.secret_key = STRONG_SECRET  # Replace with a strong secret key
 bcrypt = Bcrypt(app)
 # Hardcoded password hash (use bcrypt to generate a hash for your password)
 admin_password_hash = bcrypt.generate_password_hash(STRONG_PASSWORD).decode('utf-8')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.options |= ssl.OP_NO_TLSv1
+context.options |= ssl.OP_NO_TLSv1_1
+context.set_ciphers(STRONG_CIPHERS)
+context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
 
 
 def get_folder_name_str(filename):
@@ -39,13 +45,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
-# @app.route('/')
-# def index():
-#     return render_template('upload.html')
-
 @app.route('/')
 def index():
     if 'authenticated' in session and session['authenticated']:
+        session.pop('failed_login_counter', None)
         # If authenticated, render the admin page
         return render_template('upload.html', ip="0.0.0.0", qr_code='static/qrcode.png')
     else:
@@ -55,9 +58,11 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    counter = 0
-    if counter > 5:
-        return render_template('frig-off.html', error="Too much incorrect password, frig off")
+    if 'failed_login_counter' not in session:
+        session['failed_login_counter'] = 0  # Initialize the counter
+
+    if session['failed_login_counter'] > 5:
+        return render_template('frig-off.html', error="Too many wrong passwords, frig off")
     if request.method == 'POST':
         password = request.form['password']
         if bcrypt.check_password_hash(admin_password_hash, password):
@@ -65,10 +70,12 @@ def login():
             session['authenticated'] = True
             return redirect(url_for('index'))
         else:
-            counter+=1
             # Password is incorrect
+            session['failed_login_counter'] += 1
             return render_template('login.html', error="Invalid password.")
+
     return render_template('login.html')
+
 
 @app.route('/admin')
 def get_admin_page():
@@ -97,6 +104,7 @@ def get_admin_page():
 
     # Pass the IP address and QR code path to the admin.html template
     return render_template('admin.html', ip=ip_address, qr_code='static/qrcode.png')
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -128,11 +136,7 @@ def logout():
 
 
 if __name__ == '__main__':
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.options |= ssl.OP_NO_TLSv1
-    context.options |= ssl.OP_NO_TLSv1_1
-    context.set_ciphers(STRONG_CIPHERS)
-    context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
     create_folders(DICT_STRUCT.keys(), UPLOAD_FOLDER)
     app.run(ssl_context=context, host='0.0.0.0', port=5000)
+
 
