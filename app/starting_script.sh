@@ -9,7 +9,7 @@ openssl req -x509 -newkey rsa:4096 \
   -nodes \
   -subj "/C=XX/ST=XX/L=XX/O=XX/OU=XX/CN=localhost"
 
-echo "Certificate generated: cert.pem and key.pem"
+echo "Certificate generated!"
 
 # Run Flask app
 echo "🚀 Starting Flask app..."

@@ -6,9 +6,10 @@ WORKDIR /app
 
 # Copy application files
 COPY app/ /app/
+COPY requirements.txt /app/requirements.txt
 
 # Install Flask
-RUN pip install Flask qrcode[pil]
+RUN pip install --no-cache-dir -r requirements.txt
 
 
 # Ensure the upload folder is writable
