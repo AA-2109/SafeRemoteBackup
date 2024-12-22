@@ -14,6 +14,7 @@ DICT_STRUCT = settings.folders_dict
 STRONG_CIPHERS = settings.tls_ciphers
 STRONG_PASSWORD = settings.strong_password
 STRONG_SECRET = settings.strong_secret
+ip_address = os.getenv('HOST_IP')
 
 
 app = Flask(__name__)
@@ -48,9 +49,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 @app.route('/')
 def index():
     if 'authenticated' in session and session['authenticated']:
-        session.pop('failed_login_counter', None)
         # If authenticated, render the admin page
-        return render_template('upload.html', ip="0.0.0.0", qr_code='static/qrcode.png')
+        return render_template('upload.html', ip=ip_address)
     else:
         # Otherwise, redirect to login
         return redirect(url_for('login'))
@@ -79,8 +79,6 @@ def login():
 
 @app.route('/admin')
 def get_admin_page():
-    # Get the local IP address of the machine
-    ip_address = os.getenv('HOST_IP')
     print(f"Host IP Address: {ip_address}")
 
     # URL to be encoded in the QR code
