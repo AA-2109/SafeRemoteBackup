@@ -10,19 +10,22 @@ import settings
 
 # Directory inside container, mapped to D:\uploads on the host
 UPLOAD_FOLDER = f'/app/static/uploads/' + str(date.today()) +'/'
+# Directories structure
 DICT_STRUCT = settings.folders_dict
+#TLS ciphers
 STRONG_CIPHERS = settings.tls_ciphers
 STRONG_PASSWORD = settings.strong_password
 STRONG_SECRET = settings.strong_secret
-ip_address = os.getenv('HOST_IP')
+HOST_IP = os.getenv('HOST_IP')
 
-
+#App init
 app = Flask(__name__)
-app.secret_key = STRONG_SECRET  # Replace with a strong secret key
+app.secret_key = STRONG_SECRET
 bcrypt = Bcrypt(app)
-# Hardcoded password hash (use bcrypt to generate a hash for your password)
 admin_password_hash = bcrypt.generate_password_hash(STRONG_PASSWORD).decode('utf-8')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+
+# TLS context
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.options |= ssl.OP_NO_TLSv1
 context.options |= ssl.OP_NO_TLSv1_1
@@ -43,14 +46,14 @@ def create_folders(folder_names, base_directory):
 
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 @app.route('/')
 def index():
     if 'authenticated' in session and session['authenticated']:
         # If authenticated, render the admin page
-        return render_template('upload.html', ip=ip_address)
+        return render_template('upload.html', ip=HOST_IP)
     else:
         # Otherwise, redirect to login
         return redirect(url_for('login'))
@@ -59,7 +62,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'failed_login_counter' not in session:
-        session['failed_login_counter'] = 0  # Initialize the counter
+        session['failed_login_counter'] = 0 
 
     if session['failed_login_counter'] > 5:
         return render_template('frig-off.html', error="Too many wrong passwords, frig off")
@@ -79,10 +82,10 @@ def login():
 
 @app.route('/admin')
 def get_admin_page():
-    print(f"Host IP Address: {ip_address}")
+    print(f"Host IP Address: {HOST_IP}")
 
     # URL to be encoded in the QR code
-    url = f"https://{ip_address}:5000/"
+    url = f"https://{HOST_IP}:5000/"
 
     # Path to save the QR code (temporary)
     qr_path = os.path.join('static', 'qrcode.png')
@@ -101,7 +104,7 @@ def get_admin_page():
     img.save(qr_path)
 
     # Pass the IP address and QR code path to the admin.html template
-    return render_template('admin.html', ip=ip_address, qr_code='static/qrcode.png')
+    return render_template('admin.html', ip=HOST_IP, qr_code='static/qrcode.png')
 
 
 @app.route('/upload', methods=['POST'])
