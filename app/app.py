@@ -40,13 +40,10 @@ def get_folder_name_str(filename):
     return UPLOAD_FOLDER+"unknown_format_files"
 
 def create_folders(folder_names, base_directory):
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     for folder in folder_names:
         path = os.path.join(base_directory, folder)
         os.makedirs(path, exist_ok=True)
-
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 @app.route('/')
