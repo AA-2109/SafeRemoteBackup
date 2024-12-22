@@ -4,12 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Files</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/upload_styles.css') }}">
 </head>
 <body>
     <h1>Upload Files</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="files" multiple required>
-        <button type="submit">Upload</button>
-    </form>
+    <div>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="file-upload" class="custom-file-upload">
+                Choose Files
+            </label>
+            <input type="file" id="file-upload" name="files" multiple required>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+    <div>
+        <form action="/logout" method="get">
+            <button type="submit">Logout</button>
+        </form>
+    </div>
 </body>
 </html>

@@ -1,63 +1,88 @@
-from flask import Flask, request, render_template
 import os
-import qrcode
 import ssl
 from datetime import date
+from datetime import timedelta
+import qrcode
+from flask import Flask, request, render_template, redirect, url_for, session
+from flask_bcrypt import Bcrypt
+import settings
 
-app = Flask(__name__)
 
-# Directory mapped to D:\uploads on the host
+# Directory inside container, mapped to D:\uploads on the host
 UPLOAD_FOLDER = f'/app/static/uploads/' + str(date.today()) +'/'
-STRONG_CIPHERS = (
-    'ECDHE-ECDSA-AES256-GCM-SHA384:'
-    'ECDHE-RSA-AES256-GCM-SHA384:'
-    'ECDHE-ECDSA-AES128-GCM-SHA256:'
-    'ECDHE-RSA-AES128-GCM-SHA256:'
-    'ECDHE-ECDSA-AES256-SHA384:'
-    'ECDHE-RSA-AES256-SHA384:'
-    'TLS_AES_256_GCM_SHA384:'
-    'TLS_CHACHA20_POLY1305_SHA256:'
-    'TLS_AES_128_GCM_SHA256'
-)
+# Directories structure
+DICT_STRUCT = settings.folders_dict
+#TLS ciphers
+STRONG_CIPHERS = settings.tls_ciphers
+STRONG_PASSWORD = settings.strong_password
+STRONG_SECRET = settings.strong_secret
+HOST_IP = os.getenv('HOST_IP')
 
-folders_map = {
-    "photos": ["jpg", "jpeg", "png", "gif", "bmp"],
-    "videos": ["mp4", "avi", "mkv", "mov"],
-    "documents": ["pdf", "doc", "docx", "txt", "xls", "xlsx"],
-    "books": ["epub", "fb2"],
-    "music": ["mp3", "aac", "m4a"],
-    "archives": ["zip", "rar", "tar", "tar.bz", "tar.gz"],
-    "unknown_format_files": []
-}
+#App init
+app = Flask(__name__)
+app.secret_key = STRONG_SECRET
+bcrypt = Bcrypt(app)
+admin_password_hash = bcrypt.generate_password_hash(STRONG_PASSWORD).decode('utf-8')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+
+# TLS context
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.options |= ssl.OP_NO_TLSv1
+context.options |= ssl.OP_NO_TLSv1_1
+context.set_ciphers(STRONG_CIPHERS)
+context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
+
+
 def get_folder_name_str(filename):
-    for folder in folders_map.keys():
-        if filename.split(".")[-1] in folders_map[folder]:
+    for folder in DICT_STRUCT.keys():
+        if filename.split(".")[-1] in DICT_STRUCT[folder]:
             return UPLOAD_FOLDER+folder
     return UPLOAD_FOLDER+"unknown_format_files"
 
 def create_folders(folder_names, base_directory):
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     for folder in folder_names:
         path = os.path.join(base_directory, folder)
         os.makedirs(path, exist_ok=True)
 
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-
 @app.route('/')
 def index():
-    return render_template('upload.html')
+    if 'authenticated' in session and session['authenticated']:
+        # If authenticated, render the admin page
+        return render_template('upload.html', ip=HOST_IP)
+    else:
+        # Otherwise, redirect to login
+        return redirect(url_for('login'))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'failed_login_counter' not in session:
+        session['failed_login_counter'] = 0 
+
+    if session['failed_login_counter'] > 5:
+        return render_template('frig-off.html', error="Too many wrong passwords, frig off")
+    if request.method == 'POST':
+        password = request.form['password']
+        if bcrypt.check_password_hash(admin_password_hash, password):
+            # Password is correct, set session and redirect to admin page
+            session['authenticated'] = True
+            return redirect(url_for('index'))
+        else:
+            # Password is incorrect
+            session['failed_login_counter'] += 1
+            return render_template('login.html', error="Invalid password.")
+
+    return render_template('login.html')
 
 
 @app.route('/admin')
 def get_admin_page():
-    # Get the local IP address of the machine
-    ip_address = os.getenv('HOST_IP')
-    print(f"Host IP Address: {ip_address}")
+    print(f"Host IP Address: {HOST_IP}")
 
     # URL to be encoded in the QR code
-    url = f"https://{ip_address}:5000/"
+    url = f"https://{HOST_IP}:5000/"
 
     # Path to save the QR code (temporary)
     qr_path = os.path.join('static', 'qrcode.png')
@@ -76,7 +101,7 @@ def get_admin_page():
     img.save(qr_path)
 
     # Pass the IP address and QR code path to the admin.html template
-    return render_template('admin.html', ip=ip_address, qr_code='static/qrcode.png')
+    return render_template('admin.html', ip=HOST_IP, qr_code='static/qrcode.png')
 
 
 @app.route('/upload', methods=['POST'])
@@ -102,12 +127,14 @@ def upload_file():
     return f"Files uploaded successfully: {', '.join(uploaded_files)}"
 
 
+@app.route('/logout', methods=['GET'])
+def logout():
+    session.pop('authenticated', None)  # Clear the session
+    return redirect(url_for('login'))
+
+
 if __name__ == '__main__':
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.options |= ssl.OP_NO_TLSv1
-    context.options |= ssl.OP_NO_TLSv1_1
-    context.set_ciphers(STRONG_CIPHERS)
-    context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
-    create_folders(folders_map.keys(), UPLOAD_FOLDER)
+    create_folders(DICT_STRUCT.keys(), UPLOAD_FOLDER)
     app.run(ssl_context=context, host='0.0.0.0', port=5000)
+
 
