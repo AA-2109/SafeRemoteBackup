@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Browser</title>
+</head>
+<body>
+    <h1>Browsing: {{ current_path or '/' }}</h1>
+
+    <!-- Navigate up a directory -->
+    {% if current_path and '/' in current_path %}
+    <p><a href="{{ url_for('list_files', subpath=current_path.rsplit('/', 1)[0]) }}">[Up]</a></p>
+    {% elif current_path %}
+    <p><a href="{{ url_for('list_files') }}">[Up]</a></p>
+    {% endif %}
+
+    <h2>Folders:</h2>
+    <ul>
+        {% for d in dirs %}
+        <li>
+            <a href="{{ url_for('list_files', subpath=(current_path + '/' + d).strip('/')) }}">{{ d }}/</a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2>Files:</h2>
+    <ul>
+        {% for f in files %}
+        <li>
+            <a href="{{ url_for('serve_file', subpath=(current_path + '/' + f).strip('/')) }}">{{ f }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

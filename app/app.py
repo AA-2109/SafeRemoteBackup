@@ -3,7 +3,7 @@ import ssl
 from datetime import date
 from datetime import timedelta
 import qrcode
-from flask import Flask, request, render_template, redirect, url_for, session
+from flask import Flask, request, render_template, redirect, url_for, session, send_from_directory, abort
 from flask_bcrypt import Bcrypt
 import settings
 
@@ -125,6 +125,38 @@ def upload_file():
         return "No valid files uploaded", 400
 
     return f"Files uploaded successfully: {', '.join(uploaded_files)}"
+
+
+@app.route('/expose/', defaults={'subpath': ''}, methods=['GET'])
+@app.route('/expose/<path:subpath>', methods=['GET'])
+def list_files(subpath):
+    """
+    Lists files and directories in the specified path.
+    """
+    # Normalize the path to prevent traversal attacks
+    current_path = os.path.join(UPLOAD_FOLDER, subpath)
+    current_path = os.path.normpath(current_path)
+
+    if not os.path.exists(current_path):
+        abort(404)
+
+    # List directories and files
+    dirs = [d for d in os.listdir(current_path) if os.path.isdir(os.path.join(current_path, d))]
+    files = [f for f in os.listdir(current_path) if os.path.isfile(os.path.join(current_path, f))]
+
+    return render_template('files.html', dirs=dirs, files=files, current_path=subpath)
+
+
+@app.route('/download/<path:subpath>', methods=['GET'])
+def serve_file(subpath):
+    """
+    Serve files from the specified path for downloading or viewing.
+    """
+    try:
+        # Securely send the requested file
+        return send_from_directory(UPLOAD_FOLDER, subpath)
+    except FileNotFoundError:
+        abort(404)
 
 
 @app.route('/logout', methods=['GET'])
