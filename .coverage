@@ -1,0 +1,31 @@
+[run]
+source = app
+omit = 
+    */tests/*
+    */venv/*
+    */__init__.py
+    */config.py
+    */wsgi.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+    raise ImportError
+    except ImportError:
+    raise NotImplementedError
+    if TYPE_CHECKING:
+    @abstractmethod
+    @property
+    @classmethod
+    @staticmethod
+
+[html]
+directory = coverage_html
+title = Safe Remote Backup Test Coverage Report
+
+[xml]
+output = coverage.xml 
