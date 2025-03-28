@@ -1,36 +1,384 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Browser</title>
-</head>
-<body>
-    <h1>Browsing: {{ current_path or '/' }}</h1>
+{% extends "base.html" %}
 
-    <!-- Navigate up a directory -->
-    {% if current_path and '/' in current_path %}
-    <p><a href="{{ url_for('list_files', subpath=current_path.rsplit('/', 1)[0]) }}">[Up]</a></p>
-    {% elif current_path %}
-    <p><a href="{{ url_for('list_files') }}">[Up]</a></p>
-    {% endif %}
+{% block title %}Files - Safe Remote Backup{% endblock %}
 
-    <h2>Folders:</h2>
-    <ul>
-        {% for d in dirs %}
-        <li>
-            <a href="{{ url_for('list_files', subpath=(current_path + '/' + d).strip('/')) }}">{{ d }}/</a>
-        </li>
+{% block extra_head %}
+<style>
+    .file-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+    .file-card {
+        @apply card group relative overflow-hidden;
+    }
+    .file-card:hover {
+        @apply shadow-lg transform scale-[1.02] transition-all duration-200;
+    }
+    .file-icon {
+        @apply text-4xl text-gray-400 group-hover:text-indigo-600 transition-colors duration-200;
+    }
+    .file-actions {
+        @apply absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 
+               transform translate-y-2 group-hover:translate-y-0
+               transition-all duration-200;
+    }
+    .action-button {
+        @apply p-2 rounded-full bg-white shadow-sm hover:shadow-md 
+               text-gray-600 hover:text-indigo-600 transition-all duration-200
+               hover:scale-110;
+    }
+    .search-bar {
+        @apply relative;
+    }
+    .search-input {
+        @apply input-field pl-10;
+    }
+    .search-icon {
+        @apply absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400;
+    }
+    .filter-badge {
+        @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+               bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200
+               hover:ring-2 hover:ring-indigo-500 hover:ring-offset-2;
+    }
+    .filter-badge.active {
+        @apply bg-indigo-100 text-indigo-700 ring-2 ring-indigo-500 ring-offset-2;
+    }
+    .upload-zone {
+        @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center
+               hover:border-indigo-500 transition-colors duration-200
+               bg-gradient-to-br from-white to-gray-50;
+    }
+    .upload-zone.dragover {
+        @apply border-indigo-500 bg-indigo-50
+               from-indigo-50 to-white;
+    }
+    .progress-bar-container {
+        @apply w-48 h-2 bg-gray-200 rounded-full overflow-hidden
+               shadow-inner;
+    }
+    .progress-bar {
+        @apply h-full bg-gradient-to-r from-indigo-500 to-purple-500
+               transition-all duration-300;
+    }
+    .file-badge {
+        @apply text-xs px-2 py-1 rounded-full flex items-center space-x-1
+               transform transition-transform duration-200 hover:scale-105;
+    }
+    .file-badge.compressed {
+        @apply bg-green-100 text-green-800;
+    }
+    .file-badge.encrypted {
+        @apply bg-blue-100 text-blue-800;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-900">Files</h1>
+        <button onclick="showUploadModal()" class="btn-primary transform hover:scale-105 transition-transform duration-200">
+            <i class="fas fa-upload mr-2"></i>Upload Files
+        </button>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="space-y-4">
+        <div class="search-bar">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="search-input" class="search-input" 
+                   placeholder="Search files..." onkeyup="filterFiles()">
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button class="filter-badge active" data-filter="all">
+                <i class="fas fa-layer-group mr-2"></i>All
+            </button>
+            <button class="filter-badge" data-filter="images">
+                <i class="fas fa-image mr-2"></i>Images
+            </button>
+            <button class="filter-badge" data-filter="documents">
+                <i class="fas fa-file-alt mr-2"></i>Documents
+            </button>
+            <button class="filter-badge" data-filter="code">
+                <i class="fas fa-code mr-2"></i>Code
+            </button>
+            <button class="filter-badge" data-filter="audio">
+                <i class="fas fa-music mr-2"></i>Audio
+            </button>
+            <button class="filter-badge" data-filter="video">
+                <i class="fas fa-video mr-2"></i>Video
+            </button>
+        </div>
+    </div>
+
+    <!-- File Grid -->
+    <div class="file-grid" id="file-grid">
+        {% for file in files %}
+        <div class="file-card" data-type="{{ file.type }}" data-filename="{{ file.name }}">
+            <div class="file-actions">
+                <button class="action-button" onclick="previewFile('{{ file.name }}')" title="Preview">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-button" onclick="shareFile('{{ file.name }}')" title="Share">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+                <button class="action-button" onclick="deleteFile('{{ file.name }}')" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="file-icon">
+                    {% if file.type == 'image' %}
+                    <i class="fas fa-image"></i>
+                    {% elif file.type == 'document' %}
+                    <i class="fas fa-file-alt"></i>
+                    {% elif file.type == 'code' %}
+                    <i class="fas fa-code"></i>
+                    {% elif file.type == 'audio' %}
+                    <i class="fas fa-music"></i>
+                    {% elif file.type == 'video' %}
+                    <i class="fas fa-video"></i>
+                    {% else %}
+                    <i class="fas fa-file"></i>
+                    {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-sm font-medium text-gray-900 truncate">{{ file.name }}</h3>
+                    <p class="text-sm text-gray-500">{{ file.size }}</p>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    {% if file.compressed %}
+                    <span class="file-badge compressed">
+                        <i class="fas fa-compress-alt"></i>
+                        <span class="ml-1">Compressed</span>
+                    </span>
+                    {% endif %}
+                    {% if file.encrypted %}
+                    <span class="file-badge encrypted">
+                        <i class="fas fa-lock"></i>
+                        <span class="ml-1">Encrypted</span>
+                    </span>
+                    {% endif %}
+                </div>
+                <button onclick="downloadFile('{{ file.name }}')" class="btn-secondary text-sm transform hover:scale-105 transition-transform duration-200">
+                    <i class="fas fa-download mr-2"></i>Download
+                </button>
+            </div>
+        </div>
         {% endfor %}
-    </ul>
+    </div>
+</div>
 
-    <h2>Files:</h2>
-    <ul>
-        {% for f in files %}
-        <li>
-            <a href="{{ url_for('serve_file', subpath=(current_path + '/' + f).strip('/')) }}">{{ f }}</a>
-        </li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
+<!-- Upload Modal -->
+<div id="upload-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Upload Files</h2>
+                <button onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="upload-zone" id="upload-zone">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 mb-2">Drag and drop files here</p>
+                <p class="text-sm text-gray-500">or</p>
+                <button class="btn-secondary mt-2">
+                    <i class="fas fa-folder-open mr-2"></i>Browse Files
+                </button>
+                <input type="file" id="file-input" class="hidden" multiple>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm text-gray-500">
+                        <span id="upload-progress">0%</span> complete
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        <span id="upload-size">0 KB</span> / <span id="total-size">0 KB</span>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button onclick="closeUploadModal()" class="btn-secondary">Cancel</button>
+                <button onclick="uploadFiles()" class="btn-primary" id="upload-button">
+                    <i class="fas fa-upload mr-2"></i>Upload
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // File filtering
+    function filterFiles() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const activeFilter = document.querySelector('.filter-badge.active').dataset.filter;
+        const files = document.querySelectorAll('.file-card');
+        
+        files.forEach(file => {
+            const fileName = file.querySelector('h3').textContent.toLowerCase();
+            const fileType = file.dataset.type;
+            const matchesSearch = fileName.includes(searchTerm);
+            const matchesFilter = activeFilter === 'all' || fileType === activeFilter;
+            
+            if (matchesSearch && matchesFilter) {
+                file.style.display = 'block';
+                file.style.opacity = '1';
+                file.style.transform = 'translateY(0)';
+            } else {
+                file.style.opacity = '0';
+                file.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    file.style.display = 'none';
+                }, 200);
+            }
+        });
+    }
+
+    // Filter badge handling
+    document.querySelectorAll('.filter-badge').forEach(badge => {
+        badge.addEventListener('click', () => {
+            document.querySelector('.filter-badge.active').classList.remove('active');
+            badge.classList.add('active');
+            filterFiles();
+        });
+    });
+
+    // Upload modal
+    function showUploadModal() {
+        const modal = document.getElementById('upload-modal');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0');
+        }, 10);
+    }
+
+    function closeUploadModal() {
+        const modal = document.getElementById('upload-modal');
+        const content = modal.querySelector('.modal-content');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    // Drag and drop handling
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function formatSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function handleFiles(files) {
+        const uploadButton = document.getElementById('upload-button');
+        const totalSize = Array.from(files).reduce((acc, file) => acc + file.size, 0);
+        
+        document.getElementById('total-size').textContent = formatSize(totalSize);
+        uploadButton.disabled = false;
+        uploadButton.dataset.originalText = uploadButton.innerHTML;
+        setLoading(uploadButton, true);
+        
+        // Simulate upload progress
+        let progress = 0;
+        let uploadedSize = 0;
+        const interval = setInterval(() => {
+            progress += 5;
+            uploadedSize = (progress / 100) * totalSize;
+            
+            document.getElementById('upload-progress').textContent = `${progress}%`;
+            document.getElementById('upload-size').textContent = formatSize(uploadedSize);
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    closeUploadModal();
+                    showToast('Files uploaded successfully!');
+                }, 500);
+            }
+        }, 200);
+    }
+
+    // File operations
+    function previewFile(filename) {
+        window.location.href = `/preview/${filename}`;
+    }
+
+    function shareFile(filename) {
+        fetch(`/share/${filename}`)
+            .then(response => response.json())
+            .then(data => {
+                navigator.clipboard.writeText(data.share_url);
+                showToast('Share link copied to clipboard!');
+            })
+            .catch(error => {
+                showToast('Failed to generate share link', 'error');
+            });
+    }
+
+    function deleteFile(filename) {
+        if (confirm(`Are you sure you want to delete ${filename}?`)) {
+            const fileCard = document.querySelector(`[data-filename="${filename}"]`);
+            fileCard.style.opacity = '0';
+            fileCard.style.transform = 'scale(0.95)';
+            
+            fetch(`/delete/${filename}`, { method: 'POST' })
+                .then(response => {
+                    if (response.ok) {
+                        setTimeout(() => {
+                            fileCard.remove();
+                            showToast('File deleted successfully!');
+                        }, 300);
+                    } else {
+                        throw new Error('Failed to delete file');
+                    }
+                })
+                .catch(error => {
+                    fileCard.style.opacity = '1';
+                    fileCard.style.transform = 'scale(1)';
+                    showToast('Failed to delete file', 'error');
+                });
+        }
+    }
+
+    function downloadFile(filename) {
+        window.location.href = `/download/${filename}`;
+    }
+</script>
+{% endblock %}

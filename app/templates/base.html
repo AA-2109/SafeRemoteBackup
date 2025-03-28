@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Safe Remote Backup{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-primary {
+            @apply px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 
+                   transition-all duration-200 shadow-sm hover:shadow-md 
+                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2;
+        }
+        .btn-secondary {
+            @apply px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 
+                   transition-all duration-200 shadow-sm hover:shadow-md
+                   focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+        }
+        .input-field {
+            @apply w-full px-4 py-2 border border-gray-200 rounded-lg 
+                   focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                   transition-all duration-200;
+        }
+        .card {
+            @apply bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200
+                   border border-gray-100 p-6;
+        }
+        .nav-link {
+            @apply text-gray-600 hover:text-gray-900 transition-colors duration-200
+                   px-3 py-2 rounded-md text-sm font-medium;
+        }
+        .nav-link.active {
+            @apply text-indigo-600 bg-indigo-50;
+        }
+        .loading-spinner {
+            @apply animate-spin rounded-full h-5 w-5 border-2 border-indigo-600 border-t-transparent;
+        }
+        .toast {
+            @apply fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg
+                   transform transition-all duration-300 translate-y-0 opacity-100;
+        }
+        .toast.hidden {
+            @apply translate-y-4 opacity-0;
+        }
+        .modal {
+            @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center
+                   transition-opacity duration-300;
+        }
+        .modal-content {
+            @apply bg-white rounded-xl shadow-xl max-w-lg w-full mx-4
+                   transform transition-all duration-300 scale-100 opacity-100;
+        }
+        .modal.hidden .modal-content {
+            @apply scale-95 opacity-0;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <nav class="glass-effect sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-2">
+                        <i class="fas fa-shield-alt text-indigo-600 text-2xl"></i>
+                        <span class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 
+                                   bg-clip-text text-transparent">Safe Remote Backup</span>
+                    </a>
+                </div>
+                {% if session.get('authenticated') %}
+                <div class="flex items-center space-x-4">
+                    <a href="/admin" class="nav-link">
+                        <i class="fas fa-cog mr-2"></i>Admin
+                    </a>
+                    <form action="/logout" method="get" class="inline">
+                        <button type="submit" class="btn-secondary">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-effect mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <p class="text-gray-500 text-sm">
+                    © {% now 'utc', '%Y' %} Safe Remote Backup. All rights reserved.
+                </p>
+                <div class="flex space-x-4">
+                    <a href="#" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+
+    <!-- Modal Container -->
+    <div id="modal-container" class="fixed inset-0 z-50 hidden"></div>
+
+    <!-- Utility Scripts -->
+    <script>
+        // Toast notification system
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white`;
+            toast.textContent = message;
+            
+            document.getElementById('toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Modal system
+        function showModal(content) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="p-6">
+                        ${content}
+                        <div class="mt-6 flex justify-end">
+                            <button onclick="this.closest('.modal').remove()" 
+                                    class="btn-secondary">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modal-container').appendChild(modal);
+            setTimeout(() => modal.classList.remove('hidden'), 10);
+        }
+
+        // Loading state management
+        function setLoading(element, isLoading) {
+            if (isLoading) {
+                element.disabled = true;
+                element.innerHTML = `
+                    <div class="loading-spinner mr-2"></div>
+                    ${element.dataset.loadingText || element.textContent}
+                `;
+            } else {
+                element.disabled = false;
+                element.innerHTML = element.dataset.originalText || element.textContent;
+            }
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

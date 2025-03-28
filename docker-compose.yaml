@@ -1,11 +1,45 @@
+# Safe Remote Backup - Docker Compose Configuration
+#
+# This docker-compose file sets up the Safe Remote Backup application with proper
+# networking, volume mounting, and environment configuration.
+#
+# Author: Your Name
+# Version: 1.0.0
+
 version: '3.8'
+
 services:
-  flask-upload:
-    build:
-      context: .
+  # Main application service
+  app:
+    # Build the application using the Dockerfile
+    build: .
+    
+    # Container name for easy reference
+    container_name: safe-remote-backup
+    
+    # Restart policy for production reliability
+    restart: unless-stopped
+    
+    # Port mapping (host:container)
     ports:
-      - "${APP_PORT:-5000}:${CONTAINER_PORT:-5000}"
-    environment:
-      - HOST_IP=${HOST_IP:-127.0.0.1}
+      - "5000:5000"
+    
+    # Environment variables from .env file
+    env_file:
+      - .env
+    
+    # Volume mounts for persistent storage
     volumes:
-      - "${UPLOAD_DIR:-D:/uploads}:/app/static/uploads"
+      # Mount SSL certificates
+      - ./cert.pem:/app/cert.pem:ro
+      - ./key.pem:/app/key.pem:ro
+      # Mount uploads directory for persistent storage
+      - ./uploads:/app/static/uploads
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

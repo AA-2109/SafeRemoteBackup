@@ -1,18 +1,93 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Page</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/admin_styles.css') }}">
+{% extends "base.html" %}
 
-</head>
-<body>
-    <div class="container">
-        <h1>Welcome to the Admin Page</h1>
-        <h2>Scan this QR code to access the upload page</h2>
-        <img src="{{ qr_code }}" alt="QR Code to Upload Page">
-        <p>URL: <a href="https://{{ ip }}:5000/" target="_blank">https://{{ ip }}:5000/</a></p>
+{% block title %}Admin Dashboard - Safe Remote Backup{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="card">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+            <p class="text-gray-600">Manage your backup system</p>
+        </div>
+
+        <!-- Server Information -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Server Information</h2>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Server IP</p>
+                        <p class="text-lg font-medium text-gray-900">{{ ip }}</p>
+                    </div>
+                    {% if qr_code %}
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 mb-2">Quick Access QR Code</p>
+                        <img src="{{ url_for('static', filename=qr_code) }}" alt="QR Code" class="w-32 h-32 mx-auto">
+                        <p class="text-xs text-gray-500 mt-2">Scan to access the server</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="/" class="card hover:shadow-xl transition-shadow duration-200">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-3 bg-indigo-100 rounded-lg">
+                            <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">Upload Files</h3>
+                            <p class="text-sm text-gray-500">Upload new files to the backup system</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/expose/" class="card hover:shadow-xl transition-shadow duration-200">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-3 bg-green-100 rounded-lg">
+                            <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">Browse Files</h3>
+                            <p class="text-sm text-gray-500">View and manage existing files</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div>
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">System Status</h2>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">Upload Directory</p>
+                        <p class="text-sm font-medium text-gray-900">/app/static/uploads/{{ date.today() }}/</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Maximum Upload Size</p>
+                        <p class="text-sm font-medium text-gray-900">{{ settings.MAX_UPLOAD_SIZE // (1024 * 1024) }}MB</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Session Timeout</p>
+                        <p class="text-sm font-medium text-gray-900">{{ settings.SESSION_LIFETIME_MINUTES }} minutes</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Cache Type</p>
+                        <p class="text-sm font-medium text-gray-900">{{ settings.CACHE_TYPE }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

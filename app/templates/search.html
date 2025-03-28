@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Search Files - Safe Remote Backup{% endblock %}
+
+{% block extra_head %}
+<style>
+    .search-container {
+        @apply max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6;
+    }
+    .search-input {
+        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent;
+    }
+    .result-item {
+        @apply flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200;
+    }
+    .result-info {
+        @apply flex items-center space-x-4;
+    }
+    .file-icon {
+        @apply h-8 w-8 text-gray-400;
+    }
+    .file-details {
+        @apply text-sm text-gray-500;
+    }
+    .no-results {
+        @apply text-center py-12 text-gray-500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Search Files</h1>
+        <form action="/search" method="GET" class="flex space-x-4">
+            <input type="text" 
+                   name="q" 
+                   value="{{ query }}"
+                   placeholder="Search files..."
+                   class="search-input"
+                   autofocus>
+            <button type="submit" class="btn-primary">
+                Search
+            </button>
+        </form>
+    </div>
+
+    {% if query %}
+        {% if results %}
+            <div class="space-y-4">
+                {% for result in results %}
+                <div class="result-item">
+                    <div class="result-info">
+                        <svg class="file-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div>
+                            <a href="/preview/{{ result.path }}" class="text-indigo-600 hover:text-indigo-800">
+                                {{ result.name }}
+                            </a>
+                            <div class="file-details">
+                                {{ result.type|upper }} • {{ (result.size / 1024)|round(2) }} KB
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <a href="/preview/{{ result.path }}" class="btn-secondary text-sm">
+                            Preview
+                        </a>
+                        <a href="/download/{{ result.path }}" class="btn-primary text-sm">
+                            Download
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-results">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No files found</h3>
+                <p class="mt-1 text-sm text-gray-500">Try adjusting your search query</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %} 

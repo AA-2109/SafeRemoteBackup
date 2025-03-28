@@ -1,3 +1,62 @@
-Flask
-flask-bcrypt
-qrcode[pil]
+# Safe Remote Backup - Python Dependencies
+#
+# This file lists all Python package dependencies required for the Safe Remote Backup application.
+# Each package version is pinned for reproducibility and security.
+#
+# Author: Your Name
+# Version: 1.0.0
+
+# Core Dependencies
+Flask==2.3.3
+Werkzeug==2.3.7
+Flask-Bcrypt==1.0.1
+Flask-Limiter==3.5.0
+Flask-Caching==2.1.0
+qrcode==7.4.2
+Pillow==10.0.0
+
+# File Processing
+python-magic==0.4.27
+cryptography==41.0.7
+watchdog==3.0.0
+python-dotenv==1.0.0
+
+# Compression
+py7zr==0.20.8
+python-zipfile==0.0.1
+
+# Search and Indexing
+elasticsearch==8.11.0
+whoosh==2.7.4
+
+# Monitoring and Logging
+prometheus-client==0.19.0
+python-json-logger==2.0.7
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-timeout==2.2.0
+pytest-xdist==3.3.1
+pytest-asyncio==0.21.1
+pytest-randomly==3.15.0
+pytest-benchmark==4.0.0
+pytest-html==4.1.1
+pytest-metadata==3.0.0
+pytest-sugar==0.9.7
+pytest-watch==4.0.0
+
+# Development
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Visualization
+plotly==5.18.0
+dash==2.14.2
+dash-bootstrap-components==1.5.0
+pandas==2.0.3
+numpy==1.24.3
+matplotlib==3.7.2
+seaborn==0.12.2
