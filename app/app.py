@@ -53,9 +53,6 @@ import shutil
 import threading
 import queue
 import time
-from flask_swagger_ui import get_swaggerui_blueprint
-from flasgger import Swagger
-import atexit
 
 # Configure logging
 logging.basicConfig(
@@ -64,54 +61,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize Flask application
-app = Flask(__name__)
-app.config.from_object(settings)
-
-# Initialize extensions
-bcrypt = Bcrypt(app)
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
-cache = Cache(app)
-
-# Initialize Swagger
-SWAGGER_URL = '/api/docs'
-API_URL = '/static/swagger.json'
-swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_URL,
-    config={
-        'app_name': "Safe Remote Backup API"
-    }
-)
-app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-swagger = Swagger(app)
-
-# Initialize Elasticsearch client with retry logic
-def init_elasticsearch():
-    max_retries = 3
-    retry_delay = 5
-    
-    for attempt in range(max_retries):
-        try:
-            es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
-            if es.ping():
-                logger.info("Successfully connected to Elasticsearch")
-                return es
-            logger.warning(f"Elasticsearch ping failed, attempt {attempt + 1}/{max_retries}")
-        except Exception as e:
-            logger.error(f"Error connecting to Elasticsearch: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(retry_delay)
-            else:
-                logger.critical("Failed to connect to Elasticsearch after maximum retries")
-                raise
-    return None
-
-es = init_elasticsearch()
+# Initialize Elasticsearch client
+es = Elasticsearch([{'host': 'localhost', 'port': 9200}])
 
 # Initialize encryption
 ENCRYPTION_KEY = Fernet.generate_key()
@@ -136,35 +87,6 @@ SYNC_FOLDERS = {
 
 # Add new configuration for file comments
 COMMENTS_FILE = 'comments.json'
-
-# Global variables for cleanup
-sync_thread = None
-observer = None
-
-def cleanup():
-    """Cleanup function to be called on application shutdown."""
-    global sync_thread, observer
-    
-    if sync_thread and sync_thread.is_alive():
-        sync_queue.put(None)  # Signal thread to stop
-        sync_thread.join(timeout=5)
-        if sync_thread.is_alive():
-            logger.warning("Sync thread did not terminate gracefully")
-    
-    if observer:
-        observer.stop()
-        observer.join(timeout=5)
-        if observer.is_alive():
-            logger.warning("File observer did not terminate gracefully")
-    
-    if es:
-        try:
-            es.close()
-        except Exception as e:
-            logger.error(f"Error closing Elasticsearch connection: {e}")
-
-# Register cleanup function
-atexit.register(cleanup)
 
 class FileChangeHandler(FileSystemEventHandler):
     """Handle file system events for synchronization."""
@@ -338,6 +260,7 @@ STRONG_SECRET = settings.STRONG_SECRET
 HOST_IP = os.getenv('HOST_IP')
 
 # App init
+app = Flask(__name__)
 app.secret_key = STRONG_SECRET
 bcrypt = Bcrypt(app)
 admin_password_hash = bcrypt.generate_password_hash(STRONG_PASSWORD).decode('utf-8')
@@ -1144,17 +1067,19 @@ def handle_comments(subpath: str):
 
 # Initialize file synchronization
 def init_sync():
-    """Initialize file synchronization."""
-    global sync_thread, observer
-    
-    # Create sync thread
-    sync_thread = threading.Thread(target=sync_files, daemon=True)
-    sync_thread.start()
-    
-    # Create file observer
+    """
+    Initialize file synchronization.
+    """
+    # Start file system observer
     observer = Observer()
     observer.schedule(FileChangeHandler(), SYNC_FOLDERS['local'], recursive=True)
     observer.start()
+    
+    # Start sync worker
+    sync_thread = threading.Thread(target=sync_files, daemon=True)
+    sync_thread.start()
+    
+    return observer
 
 # Add batch operations
 @app.route('/batch/delete', methods=['POST'])
@@ -1252,259 +1177,19 @@ def batch_share():
         logger.error(f"Error in batch share: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-# Add API documentation decorators
-@app.route('/api/v1/files', methods=['GET'])
-@swag_from({
-    'summary': 'List all files',
-    'parameters': [
-        {
-            'name': 'page',
-            'in': 'query',
-            'type': 'integer',
-            'required': False,
-            'default': 1,
-            'description': 'Page number for pagination'
-        },
-        {
-            'name': 'per_page',
-            'in': 'query',
-            'type': 'integer',
-            'required': False,
-            'default': 20,
-            'description': 'Number of items per page'
-        },
-        {
-            'name': 'sort_by',
-            'in': 'query',
-            'type': 'string',
-            'required': False,
-            'enum': ['name', 'size', 'date'],
-            'description': 'Field to sort by'
-        }
-    ],
-    'responses': {
-        '200': {
-            'description': 'List of files retrieved successfully',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'files': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'name': {'type': 'string'},
-                                'path': {'type': 'string'},
-                                'size': {'type': 'integer'},
-                                'type': {'type': 'string'},
-                                'upload_date': {'type': 'string'}
-                            }
-                        }
-                    },
-                    'total': {'type': 'integer'},
-                    'page': {'type': 'integer'},
-                    'per_page': {'type': 'integer'}
-                }
-            }
-        }
-    }
-})
-def list_files_api():
-    """List all files with pagination and sorting."""
-    try:
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
-        sort_by = request.args.get('sort_by', 'name')
-        
-        # Get all files
-        files = []
-        for root, _, filenames in os.walk(UPLOAD_FOLDER):
-            for filename in filenames:
-                file_path = os.path.join(root, filename)
-                rel_path = os.path.relpath(file_path, UPLOAD_FOLDER)
-                files.append({
-                    'name': filename,
-                    'path': rel_path,
-                    'size': os.path.getsize(file_path),
-                    'type': filename.rsplit('.', 1)[1].lower() if '.' in filename else '',
-                    'upload_date': datetime.fromtimestamp(os.path.getctime(file_path)).isoformat()
-                })
-        
-        # Sort files
-        if sort_by == 'size':
-            files.sort(key=lambda x: x['size'])
-        elif sort_by == 'date':
-            files.sort(key=lambda x: x['upload_date'], reverse=True)
-        else:
-            files.sort(key=lambda x: x['name'])
-        
-        # Paginate
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        paginated_files = files[start_idx:end_idx]
-        
-        return jsonify({
-            'files': paginated_files,
-            'total': len(files),
-            'page': page,
-            'per_page': per_page
-        })
-    except Exception as e:
-        logger.error(f"Error listing files: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
-
-@app.route('/api/v1/files/<path:filepath>', methods=['GET'])
-@swag_from({
-    'summary': 'Get file details',
-    'parameters': [
-        {
-            'name': 'filepath',
-            'in': 'path',
-            'type': 'string',
-            'required': True,
-            'description': 'Path to the file'
-        }
-    ],
-    'responses': {
-        '200': {
-            'description': 'File details retrieved successfully',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'name': {'type': 'string'},
-                    'path': {'type': 'string'},
-                    'size': {'type': 'integer'},
-                    'type': {'type': 'string'},
-                    'upload_date': {'type': 'string'},
-                    'metadata': {'type': 'object'},
-                    'versions': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'version': {'type': 'integer'},
-                                'path': {'type': 'string'},
-                                'created_at': {'type': 'string'}
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        '404': {'description': 'File not found'}
-    }
-})
-def get_file_details(filepath: str):
-    """Get detailed information about a specific file."""
-    try:
-        file_path = os.path.join(UPLOAD_FOLDER, filepath)
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'File not found'}), 404
-            
-        filename = os.path.basename(file_path)
-        file_type = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-        file_size = os.path.getsize(file_path)
-        upload_date = datetime.fromtimestamp(os.path.getctime(file_path)).isoformat()
-        
-        metadata = load_metadata().get(filepath, {})
-        versions = metadata.get('versions', [])
-        
-        return jsonify({
-            'name': filename,
-            'path': filepath,
-            'size': file_size,
-            'type': file_type,
-            'upload_date': upload_date,
-            'metadata': metadata,
-            'versions': versions
-        })
-    except Exception as e:
-        logger.error(f"Error getting file details: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
-
-@app.route('/api/v1/files/<path:filepath>/preview', methods=['GET'])
-@swag_from({
-    'summary': 'Get file preview',
-    'parameters': [
-        {
-            'name': 'filepath',
-            'in': 'path',
-            'type': 'string',
-            'required': True,
-            'description': 'Path to the file'
-        }
-    ],
-    'responses': {
-        '200': {
-            'description': 'File preview retrieved successfully',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'preview_type': {'type': 'string'},
-                    'preview_content': {'type': 'string'}
-                }
-            }
-        },
-        '404': {'description': 'File not found'},
-        '400': {'description': 'Preview not supported for this file type'}
-    }
-})
-def get_file_preview(filepath: str):
-    """Get preview content for a file."""
-    try:
-        file_path = os.path.join(UPLOAD_FOLDER, filepath)
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'File not found'}), 404
-            
-        filename = os.path.basename(file_path)
-        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-        
-        if ext in PREVIEWABLE_EXTENSIONS['images']:
-            preview_type = 'image'
-            preview_content = f'<img src="/download/{filepath}" alt="{filename}" class="max-w-full h-auto">'
-        elif ext in PREVIEWABLE_EXTENSIONS['documents']:
-            if ext == 'pdf':
-                preview_type = 'pdf'
-                preview_content = f'<iframe src="/download/{filepath}" class="w-full h-screen"></iframe>'
-            else:
-                preview_type = 'text'
-                preview_content = preview_text_file(file_path)
-        elif ext in PREVIEWABLE_EXTENSIONS['code']:
-            preview_type = 'code'
-            preview_content = preview_text_file(file_path)
-        elif ext in PREVIEWABLE_EXTENSIONS['audio']:
-            preview_type = 'audio'
-            preview_content = preview_audio_file(filepath)
-        elif ext in PREVIEWABLE_EXTENSIONS['video']:
-            preview_type = 'video'
-            preview_content = preview_video_file(filepath)
-        else:
-            return jsonify({'error': 'Preview not supported for this file type'}), 400
-            
-        return jsonify({
-            'preview_type': preview_type,
-            'preview_content': preview_content
-        })
-    except Exception as e:
-        logger.error(f"Error getting file preview: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
-
 if __name__ == '__main__':
     try:
+        create_folders(DICT_STRUCT.keys(), UPLOAD_FOLDER)
+        
         # Initialize file synchronization
-        init_sync()
+        observer = init_sync()
         
-        # Create SSL context
-        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        context.load_cert_chain('certs/cert.pem', 'certs/key.pem')
-        context.set_ciphers(settings.tls_ciphers)
-        
-        # Start the application
         app.run(ssl_context=context, host='0.0.0.0', port=5000)
     except Exception as e:
         logger.critical(f"Failed to start application: {e}")
         raise
     finally:
-        cleanup()
+        observer.stop()
+        observer.join()
 
 
