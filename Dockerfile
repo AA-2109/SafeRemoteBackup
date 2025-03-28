@@ -1,22 +1,45 @@
-# Base image
-FROM python:3.9-slim
+# Safe Remote Backup - Docker Configuration
+#
+# This Dockerfile sets up a secure environment for running the Safe Remote Backup application.
+# It uses Python 3.11 slim image as the base and implements security best practices.
+#
+# Author: Your Name
+# Version: 1.0.0
+
+# Use Python 3.11 slim image
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Set working directory
 WORKDIR /app
 
-# Copy application files
-COPY app/ /app/
-COPY requirements.txt /app/requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Flask
+# Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy application code
+COPY . .
 
-# Ensure the upload folder is writable
-RUN mkdir -p /app/static/uploads && chmod -R 777 /app/static/uploads
+# Create necessary directories
+RUN mkdir -p /app/uploads /app/backups /app/logs
 
-# Expose the Flask app port
+# Set permissions
+RUN chmod -R 755 /app
+
+# Expose port
 EXPOSE 5000
 
-# Command to run the Flask app
-CMD ["bash", "starting_script.sh"]
+# Run the application
+CMD ["python", "app.py"]

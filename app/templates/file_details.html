@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}File Details - {{ filename }} - Safe Remote Backup{% endblock %}
+
+{% block extra_head %}
+<style>
+    .details-container {
+        @apply max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6;
+    }
+    .version-list {
+        @apply space-y-4 mt-6;
+    }
+    .version-item {
+        @apply flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200;
+    }
+    .metadata-form {
+        @apply space-y-4 mt-6;
+    }
+    .form-group {
+        @apply space-y-2;
+    }
+    .form-label {
+        @apply block text-sm font-medium text-gray-700;
+    }
+    .form-input {
+        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent;
+    }
+    .form-textarea {
+        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-32;
+    }
+    .comments-section {
+        @apply mt-8;
+    }
+    .comment-list {
+        @apply space-y-4 mt-4;
+    }
+    .comment-item {
+        @apply p-4 bg-gray-50 rounded-lg;
+    }
+    .comment-header {
+        @apply flex items-center justify-between mb-2;
+    }
+    .comment-user {
+        @apply font-medium text-gray-900;
+    }
+    .comment-date {
+        @apply text-sm text-gray-500;
+    }
+    .comment-text {
+        @apply text-gray-700;
+    }
+    .security-badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    }
+    .badge-compressed {
+        @apply bg-blue-100 text-blue-800;
+    }
+    .badge-encrypted {
+        @apply bg-green-100 text-green-800;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="details-container">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{{ filename }}</h1>
+        <div class="flex space-x-4">
+            <a href="/preview/{{ file_path }}" class="btn-secondary">
+                Preview
+            </a>
+            <a href="/download/{{ file_path }}" class="btn-primary">
+                Download
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- File Information -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">File Information</h2>
+            <div class="space-y-2">
+                <p><span class="font-medium">Type:</span> {{ file_type|upper }}</p>
+                <p><span class="font-medium">Size:</span> {{ (file_size / 1024)|round(2) }} KB</p>
+                <p><span class="font-medium">Uploaded:</span> {{ upload_date }}</p>
+                <div class="flex space-x-2 mt-2">
+                    {% if metadata.compressed %}
+                    <span class="security-badge badge-compressed">
+                        <svg class="mr-1.5 h-2 w-2 text-blue-400" fill="currentColor" viewBox="0 0 8 8">
+                            <circle cx="4" cy="4" r="3" />
+                        </svg>
+                        Compressed
+                    </span>
+                    {% endif %}
+                    {% if metadata.encrypted %}
+                    <span class="security-badge badge-encrypted">
+                        <svg class="mr-1.5 h-2 w-2 text-green-400" fill="currentColor" viewBox="0 0 8 8">
+                            <circle cx="4" cy="4" r="3" />
+                        </svg>
+                        Encrypted
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Version Management -->
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Version Management</h2>
+            <button onclick="createVersion()" class="btn-primary mb-4">
+                Create New Version
+            </button>
+            <div id="version-list" class="version-list">
+                <!-- Versions will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata Form -->
+    <div class="mt-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">File Metadata</h2>
+        <form id="metadata-form" class="metadata-form">
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-textarea" placeholder="Enter file description...">{{ metadata.description }}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tags</label>
+                <input type="text" name="tags" class="form-input" placeholder="Enter tags (comma-separated)" value="{{ metadata.tags|join(', ') }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <input type="text" name="category" class="form-input" placeholder="Enter category" value="{{ metadata.category }}">
+            </div>
+            <button type="submit" class="btn-primary">
+                Save Metadata
+            </button>
+        </form>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Comments</h2>
+        <form id="comment-form" class="mb-4">
+            <div class="form-group">
+                <textarea name="comment" class="form-textarea" placeholder="Add a comment..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary">
+                Add Comment
+            </button>
+        </form>
+        <div id="comments-list" class="comment-list">
+            <!-- Comments will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load versions
+async function loadVersions() {
+    try {
+        const response = await fetch('/versions/{{ file_path }}');
+        const versions = await response.json();
+        
+        const versionList = document.getElementById('version-list');
+        versionList.innerHTML = versions.map(version => `
+            <div class="version-item">
+                <div>
+                    <span class="font-medium">Version ${version.version}</span>
+                    <span class="text-sm text-gray-500">${new Date(version.created_at).toLocaleString()}</span>
+                </div>
+                <div class="flex space-x-2">
+                    <a href="/preview/${version.path}" class="btn-secondary text-sm">
+                        Preview
+                    </a>
+                    <a href="/download/${version.path}" class="btn-primary text-sm">
+                        Download
+                    </a>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading versions:', error);
+    }
+}
+
+// Create new version
+async function createVersion() {
+    try {
+        const response = await fetch('/version/{{ file_path }}', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('New version created successfully!');
+            loadVersions();
+        } else {
+            alert(data.error || 'Error creating version');
+        }
+    } catch (error) {
+        console.error('Error creating version:', error);
+        alert('Error creating version');
+    }
+}
+
+// Load comments
+async function loadComments() {
+    try {
+        const response = await fetch('/comments/{{ file_path }}');
+        const comments = await response.json();
+        
+        const commentsList = document.getElementById('comments-list');
+        commentsList.innerHTML = comments.map(comment => `
+            <div class="comment-item">
+                <div class="comment-header">
+                    <span class="comment-user">${comment.user}</span>
+                    <span class="comment-date">${new Date(comment.created_at).toLocaleString()}</span>
+                </div>
+                <div class="comment-text">${comment.text}</div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading comments:', error);
+    }
+}
+
+// Handle metadata form submission
+document.getElementById('metadata-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const metadata = {
+        description: formData.get('description'),
+        tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag),
+        category: formData.get('category')
+    };
+    
+    try {
+        const response = await fetch('/metadata/{{ file_path }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(metadata)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Metadata updated successfully!');
+        } else {
+            alert(data.error || 'Error updating metadata');
+        }
+    } catch (error) {
+        console.error('Error updating metadata:', error);
+        alert('Error updating metadata');
+    }
+});
+
+// Handle comment form submission
+document.getElementById('comment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const comment = {
+        text: formData.get('comment')
+    };
+    
+    try {
+        const response = await fetch('/comments/{{ file_path }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(comment)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            e.target.reset();
+            loadComments();
+        } else {
+            alert(data.error || 'Error adding comment');
+        }
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        alert('Error adding comment');
+    }
+});
+
+// Load versions and comments when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    loadVersions();
+    loadComments();
+});
+</script>
+{% endblock %} 
