@@ -1,6 +1,13 @@
 # Base image
 FROM python:3.9-slim
 
+#Install dependendencies
+RUN apt-get update && apt-get install -y \
+    zlib1g-dev \
+    gcc \
+    libjpeg-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 
@@ -13,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 
 # Ensure the upload folder is writable
-RUN mkdir -p /app/static/uploads && chmod -R 777 /app/static/uploads
+RUN mkdir -p /app/static/uploads && chmod -R 755 /app/static/uploads
 
 # Expose the Flask app port
 EXPOSE 5000

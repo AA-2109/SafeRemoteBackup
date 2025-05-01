@@ -1,15 +1,16 @@
 import os
 import ssl
-from datetime import date
+import utils
 from datetime import timedelta
 import qrcode
 from flask import Flask, request, render_template, redirect, url_for, session
 from flask_bcrypt import Bcrypt
 import settings
+from werkzeug.utils import secure_filename
 
 
 # Directory inside container, mapped to D:\uploads on the host
-UPLOAD_FOLDER = f'/app/static/uploads/' + str(date.today()) +'/'
+UPLOAD_FOLDER = f'/app/static/uploads/{utils.get_current_date}/'
 # Directories structure
 DICT_STRUCT = settings.folders_dict
 #TLS ciphers
@@ -32,20 +33,6 @@ context.options |= ssl.OP_NO_TLSv1_1
 context.set_ciphers(STRONG_CIPHERS)
 context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
 
-
-def get_folder_name_str(filename):
-    for folder in DICT_STRUCT.keys():
-        if filename.split(".")[-1] in DICT_STRUCT[folder]:
-            return UPLOAD_FOLDER+folder
-    return UPLOAD_FOLDER+"unknown_format_files"
-
-def create_folders(folder_names, base_directory):
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    for folder in folder_names:
-        path = os.path.join(base_directory, folder)
-        os.makedirs(path, exist_ok=True)
-
-
 @app.route('/')
 def index():
     if 'authenticated' in session and session['authenticated']:
@@ -54,7 +41,6 @@ def index():
     else:
         # Otherwise, redirect to login
         return redirect(url_for('login'))
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -108,7 +94,7 @@ def get_admin_page():
 def upload_file():
     if 'files' not in request.files:
         return "No file part", 400
-    files = request.files.getlist('files')  # Get a list of uploaded files
+    files = request.files.getlist('files')
 
     if not files:
         return "No files selected", 400
@@ -116,10 +102,17 @@ def upload_file():
     uploaded_files = []
     for file in files:
         if file.filename == '':
-            continue  # Skip files with no name
-        filepath = os.path.join(get_folder_name_str(file.filename), file.filename)
-        file.save(filepath)
-        uploaded_files.append(file.filename)
+            continue
+        filename = secure_filename(file.filename)
+        folder = utils.get_folder_name_str(filename)
+        os.makedirs(folder, exist_ok=True)
+        filepath = os.path.join(folder, filename)
+        with open(filepath, 'wb') as f:
+            file.stream.seek(0)
+            while chunk := file.stream.read(4096):
+                f.write(chunk)
+        print(f"File {filename} uploaded succesfully")
+        uploaded_files.append(filename)
 
     if not uploaded_files:
         return "No valid files uploaded", 400
@@ -134,7 +127,7 @@ def logout():
 
 
 if __name__ == '__main__':
-    create_folders(DICT_STRUCT.keys(), UPLOAD_FOLDER)
-    app.run(ssl_context=context, host='0.0.0.0', port=5000)
+    utils.create_folders(DICT_STRUCT.keys(), UPLOAD_FOLDER)
+    app.run(ssl_context=context, host="0.0.0.0", port=5000)
 
 

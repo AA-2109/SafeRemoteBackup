@@ -3,7 +3,7 @@ import os
 # folders_dict = {'folder_name':[set of file extensions that you want to ut inside a folder]}
 
 folders_dict = {
-    "photos": {"jpg", "jpeg", "png", "gif", "bmp"},
+    "photos": {"jpg", "jpeg", "png", "gif", "bmp", "heic"},
     "videos": {"mp4", "avi", "mkv", "mov"},
     "documents": {"pdf", "doc", "docx", "txt", "xls", "xlsx"},
     "books": {"epub", "fb2"},

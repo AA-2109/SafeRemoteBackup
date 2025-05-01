@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   flask-upload:
     build:
@@ -8,4 +7,4 @@ services:
     environment:
       - HOST_IP=${HOST_IP:-127.0.0.1}
     volumes:
-      - "${UPLOAD_DIR:-D:/uploads}:/app/static/uploads"
+      - "${UPLOAD_DIR:-/mnt/share/uploads}:/app/static/uploads"
