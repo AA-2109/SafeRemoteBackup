@@ -6,19 +6,7 @@
     <title>Upload Files</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/upload_styles.css') }}">
 </head>
-<script>
-    const fileInput = document.getElementById('file-upload');
-    const fileList = document.getElementById('file-list');
 
-    fileInput.addEventListener('change', () => {
-        fileList.innerHTML = '';
-        Array.from(fileInput.files).forEach(file => {
-            const li = document.createElement('li');
-            li.textContent = file.name;
-            fileList.appendChild(li);
-        });
-    });
-</script>
 <body>
     <h1>Upload Files</h1>
     <div>
@@ -29,9 +17,6 @@
             <input type="file" id="file-upload" name="files" multiple required>
             <button type="submit">Upload</button>
         </form>
-    </div>
-    <div>
-        <ul id="file-list"></ul>
     </div>
     <div>
         <form action="/logout" method="get">

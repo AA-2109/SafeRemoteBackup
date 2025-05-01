@@ -1,5 +1,4 @@
 import os 
-from datetime import date
 import app
 
 def get_folder_name_str(filename):
