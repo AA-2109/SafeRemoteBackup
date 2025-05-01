@@ -2,10 +2,6 @@ import os
 from datetime import date
 import app
 
-def get_current_date():
-    return str(date.today())
-
-
 def get_folder_name_str(filename):
     for folder in app.DICT_STRUCT.keys():
         if filename.split(".")[-1] in app.DICT_STRUCT[folder]:

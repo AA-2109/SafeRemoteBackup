@@ -2,6 +2,7 @@ import os
 import ssl
 import utils
 from datetime import timedelta
+from datetime import date
 import qrcode
 from flask import Flask, request, render_template, redirect, url_for, session
 from flask_bcrypt import Bcrypt
@@ -10,7 +11,7 @@ from werkzeug.utils import secure_filename
 
 
 # Directory inside container, mapped to D:\uploads on the host
-UPLOAD_FOLDER = f'/app/static/uploads/{utils.get_current_date}/'
+UPLOAD_FOLDER = f'/app/static/uploads/{str(date.today())}/'
 # Directories structure
 DICT_STRUCT = settings.folders_dict
 #TLS ciphers
