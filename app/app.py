@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 
 
 # Directory inside container, mapped to D:\uploads on the host
-UPLOAD_FOLDER = f'/app/static/uploads/{str(date.today())}/'
+UPLOAD_FOLDER = f'/app/static/uploads/'
 # Directories structure
 DICT_STRUCT = settings.folders_dict
 #TLS ciphers

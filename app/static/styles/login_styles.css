@@ -27,7 +27,6 @@ label {
   color: #555;
 }
 input[type="password"] {
-  width: 100%;
   padding: 10px;
   margin: auto;
   border: 1px solid #ddd;
@@ -37,7 +36,7 @@ input[type="password"] {
 button {
   background-color: #4caf50;
   color: white;
-  padding: 10px 15px;
+  padding: 10px 10px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
