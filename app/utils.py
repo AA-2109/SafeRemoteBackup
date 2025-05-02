@@ -8,8 +8,8 @@ from settings import path_to_upload
 def get_folder_name_str(filename):
     for folder in app.DICT_STRUCT.keys():
         if filename.split(".")[-1] in app.DICT_STRUCT[folder]:
-            return app.UPLOAD_FOLDER+folder
-    return app.UPLOAD_FOLDER+"unknown_format_files"
+            return f"{app.UPLOAD_FOLDER}/"+folder
+    return f"{app.UPLOAD_FOLDER}/unknown_format_files"
 
 
 def create_folders(folder_names, base_directory):
