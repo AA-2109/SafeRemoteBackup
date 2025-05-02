@@ -2,8 +2,7 @@ import os
 import app
 import hashlib
 from datetime import date
-import settings
-from app.settings import path_to_upload
+from settings import path_to_upload
 
 
 def get_folder_name_str(filename):

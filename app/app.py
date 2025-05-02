@@ -30,7 +30,7 @@ context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.minimum_version = ssl.TLSVersion.TLSv1_2
 context.maximum_version = ssl.TLSVersion.TLSv1_3
 context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20")
-context.set_ecdh_curve("X25519:secp384r1")
+context.set_ecdh_curve("X25519")
 context.options |= ssl.OP_CIPHER_SERVER_PREFERENCE
 context.options |= ssl.OP_NO_COMPRESSION
 context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
