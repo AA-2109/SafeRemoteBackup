@@ -1,7 +1,7 @@
 import os 
 import app
 import hashlib
-from datetime import date
+from datetime import datetime
 from settings import path_to_upload, hash_algo
 
 
@@ -30,4 +30,4 @@ def hash_file(path, algo=hash_algo):
 def update_logfile(filepath):
     logfile=f"{path_to_upload}/upload_log.log"
     with open(logfile, "a") as log:
-        log.write(f"{str(date.ctime())} -- {filepath} -- {hash_file(filepath)}\n")
+        log.write(f"{str(datetime.now().ctime())} -- {filepath} -- {hash_file(filepath)}\n")
