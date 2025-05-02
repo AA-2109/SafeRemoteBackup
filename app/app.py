@@ -3,7 +3,7 @@ import ssl
 import utils
 from datetime import timedelta
 import qrcode
-from flask import Flask, request, render_template, redirect, url_for, session
+from flask import Flask, request, render_template, redirect, url_for, session, flash
 from flask_bcrypt import Bcrypt
 import settings
 from werkzeug.utils import secure_filename
@@ -119,7 +119,8 @@ def upload_file():
     if not uploaded_files:
         return "No valid files uploaded", 400
 
-    return redirect(url_for('upload'))
+    flash("Files uploaded successfully!", "success")
+    return redirect(url_for('index'))
 
 
 @app.route('/logout', methods=['GET'])
