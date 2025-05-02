@@ -2,7 +2,6 @@ import os
 import ssl
 import utils
 from datetime import timedelta
-from datetime import date
 import qrcode
 from flask import Flask, request, render_template, redirect, url_for, session
 from flask_bcrypt import Bcrypt
