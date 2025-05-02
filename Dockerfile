@@ -1,5 +1,5 @@
 # Base image
-FROM python:3.9-slim
+FROM python:3.13.3-slim
 
 #Install dependendencies
 RUN apt-get update && apt-get install -y \

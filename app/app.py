@@ -10,11 +10,10 @@ from werkzeug.utils import secure_filename
 
 
 # Directory inside container, mapped to D:\uploads on the host
-UPLOAD_FOLDER = f'/app/static/uploads/'
+UPLOAD_FOLDER = settings.path_to_upload
 # Directories structure
 DICT_STRUCT = settings.folders_dict
 #TLS ciphers
-STRONG_CIPHERS = settings.tls_ciphers
 STRONG_PASSWORD = settings.strong_password
 STRONG_SECRET = settings.strong_secret
 HOST_IP = os.getenv('HOST_IP')
@@ -28,9 +27,12 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
 # TLS context
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-context.options |= ssl.OP_NO_TLSv1
-context.options |= ssl.OP_NO_TLSv1_1
-context.set_ciphers(STRONG_CIPHERS)
+context.minimum_version = ssl.TLSVersion.TLSv1_2
+context.maximum_version = ssl.TLSVersion.TLSv1_3
+context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20")
+context.set_ecdh_curve("X25519:secp384r1")
+context.options |= ssl.OP_CIPHER_SERVER_PREFERENCE
+context.options |= ssl.OP_NO_COMPRESSION
 context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
 
 @app.route('/')
@@ -47,7 +49,7 @@ def login():
     if 'failed_login_counter' not in session:
         session['failed_login_counter'] = 0 
 
-    if session['failed_login_counter'] > 5:
+    if session['failed_login_counter'] > 3:
         return render_template('frig-off.html', error="Too many wrong passwords, frig off")
     if request.method == 'POST':
         password = request.form['password']
@@ -111,7 +113,7 @@ def upload_file():
             file.stream.seek(0)
             while chunk := file.stream.read(4096):
                 f.write(chunk)
-        print(f"File {filename} uploaded succesfully")
+        utils.update_logfile(filepath)
         uploaded_files.append(filename)
 
     if not uploaded_files:
