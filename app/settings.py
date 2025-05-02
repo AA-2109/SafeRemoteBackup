@@ -10,7 +10,7 @@ folders_dict = {
     "logs": {"log"},
     "configuration": {"cfg", "ini", "conf"},
     "books": {"epub", "fb2"},
-    "music": {"mp3", "aac", "m4a", "flac", "waw", "aac", "alac"},
+    "music": {"mp3", "aac", "m4a", "flac", "wav", "aac", "alac"},
     "archives": {"zip", "rar", "tar", "tar.bz", "tar.gz"},
     "unknown_format_files": {}
 }

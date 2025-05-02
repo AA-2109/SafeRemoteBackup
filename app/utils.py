@@ -30,4 +30,4 @@ def hash_file(path, algo=hash_algo):
 def update_logfile(filepath):
     logfile=f"{path_to_upload}/upload_log.log"
     with open(logfile, "a") as log:
-        log.write(f"{str(date.today())} -- {filepath} -- {hash_file(filepath)}\n")
+        log.write(f"{str(date.ctime())} -- {filepath} -- {hash_file(filepath)}\n")
