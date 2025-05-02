@@ -2,14 +2,14 @@ import os
 import app
 import hashlib
 from datetime import date
-from settings import path_to_upload
+from settings import path_to_upload, hash_algo
 
 
 def get_folder_name_str(filename):
     for folder in app.DICT_STRUCT.keys():
         if filename.split(".")[-1] in app.DICT_STRUCT[folder]:
-            return f"{app.UPLOAD_FOLDER}/"+folder
-    return f"{app.UPLOAD_FOLDER}/unknown_format_files"
+            return f"{path_to_upload}/"+folder
+    return f"{path_to_upload}/unknown_format_files"
 
 
 def create_folders(folder_names, base_directory):
@@ -19,7 +19,7 @@ def create_folders(folder_names, base_directory):
         os.makedirs(path, exist_ok=True)
 
 
-def hash_file(path, algo='md5'):
+def hash_file(path, algo=hash_algo):
     h = hashlib.new(algo)
     with open(path, 'rb') as f:
        while chunk := f.read(8192):

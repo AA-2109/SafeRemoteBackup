@@ -17,6 +17,7 @@ folders_dict = {
 
 
 path_to_upload = f'/app/static/uploads'
+hash_algo = 'md5'
 strong_password = "HelloWorld123!"
 strong_secret = os.urandom(24)
 
