@@ -119,7 +119,7 @@ def upload_file():
     if not uploaded_files:
         return "No valid files uploaded", 400
 
-    return f"Files uploaded successfully: {', '.join(uploaded_files)}"
+    return redirect(url_for('upload'))
 
 
 @app.route('/logout', methods=['GET'])
