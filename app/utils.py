@@ -32,7 +32,7 @@ def get_relative_filepath(filepath: str):
     return f"{app.UPLOAD_DIR}"+"/".join(relative_path_str)
 
 
-def update_logfile(filepath: str, path_to_logfile: str, success: bool, e: Exception):
-    message = hash_file(filepath) if success else f"upload failed with {e}"
+def update_logfile(filepath: str, path_to_logfile: str, success: bool, e: Exception = None):
+    message = hash_file(filepath) if success else f"upload failed with {e}" 
     with open(path_to_logfile, "a") as log:
         log.write(f"{str(datetime.now().ctime())} -- {get_relative_filepath(filepath)} -- {message}\n")
