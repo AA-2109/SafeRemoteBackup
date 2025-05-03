@@ -57,16 +57,16 @@
        'videos': ['mp4', 'avi'],
    }
 
-   tls_ciphers = 'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
    strong_password = 'your_admin_password'
-   strong_secret = 'your_secret_key'
    ```
-3. Update `.env` file, e.g.:
+3. Update `docker-compose.yaml` file, e.g.:
     ```bash
-    APP_PORT=5000
-    CONTAINER_PORT=5000
-    HOST_IP={ip adress}
-    UPLOAD_DIR=D:/uploads
+    ports:
+      - "${APP_PORT:-5000}:${CONTAINER_PORT:-5000}"
+    environment:
+      - HOST_IP=${HOST_IP:-127.0.0.1}
+    volumes:
+      - "${UPLOAD_DIR:-/mnt/share/uploads}:/app/static/uploads"
    ```
 ---
 
@@ -74,31 +74,21 @@
 
 1. **Run the Application:**
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
 2. **Access the Web Interface:**
-   - Navigate to `https://<HOST_IP>:5000/` in your browser.
+   - Navigate to `https://<$HOST_IP>:5000/` in your browser.
 
 3. **Login:**
    - Enter the admin password defined in `settings.py`.
 
 4. **Upload Files:**
-   - Files are saved in structured directories under `UPLOAD_DIR` in `.env`.
+   - Files are saved in structured directories under `UPLOAD_DIR` in `docker-compose.yaml`.
 
 5. **Admin Page:**
    - Find a link for mobile devices on admin portal - QR code and IP address are available there.
 
----
-
-## Folder Structure
-
-- **`static/uploads/YYYY-MM-DD/`**
-  - Contains uploaded files organized into subdirectories based on file type.
-- **`settings.py`**
-  - Configuration file for folder mappings, TLS ciphers, and secrets.
-- **`.env`**
-  - Configuration file for Docker container.
 ---
 
 ## Security Features
