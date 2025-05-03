@@ -15,7 +15,7 @@ UPLOAD_FOLDER = settings.path_to_upload
 DICT_STRUCT = settings.folders_dict
 #TLS ciphers
 STRONG_PASSWORD = settings.strong_password
-STRONG_SECRET = settings.strong_secret
+STRONG_SECRET = os.urandom(24)
 HOST_IP = os.getenv('HOST_IP')
 
 #App init
