@@ -117,11 +117,11 @@ def upload_file():
                 file.stream.seek(0)
                 while chunk := file.stream.read(4096):
                     f.write(chunk)
-            utils.update_logfile(filepath, path_to_upload_logfile, True)
+            utils.update_logfile(filepath, settings.path_to_upload_logfile, True)
             uploaded_files.append(filename)
     
     except Exception as e:
-        utils.update_logfile(filepath, path_to_failed_logfile, False, e)
+        utils.update_logfile(filepath, settings.path_to_failed_logfile, False, e)
     
     if not uploaded_files:
         return "No valid files uploaded", 400
