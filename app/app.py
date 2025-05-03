@@ -104,24 +104,28 @@ def upload_file():
         return "No files selected", 400
 
     uploaded_files = []
-    for file in files:
-        if file.filename == '':
-            continue
-        filename = secure_filename(file.filename)
-        folder = utils.get_folder_name_str(filename)
-        os.makedirs(folder, exist_ok=True)
-        filepath = os.path.join(folder, filename)
-        with open(filepath, 'wb') as f:
-            file.stream.seek(0)
-            while chunk := file.stream.read(4096):
-                f.write(chunk)
-        utils.update_logfile(filepath)
-        uploaded_files.append(filename)
-
+    
+    try:
+        for file in files:
+            if file.filename == '':
+                continue
+            filename = secure_filename(file.filename)
+            folder = utils.get_folder_name_str(filename)
+            os.makedirs(folder, exist_ok=True)
+            filepath = os.path.join(folder, filename)
+            with open(filepath, 'wb') as f:
+                file.stream.seek(0)
+                while chunk := file.stream.read(4096):
+                    f.write(chunk)
+            utils.update_logfile(filepath, path_to_upload_logfile, True)
+            uploaded_files.append(filename)
+    
+    except Exception as e:
+        utils.update_logfile(filepath, path_to_failed_logfile, False, e)
+    
     if not uploaded_files:
         return "No valid files uploaded", 400
 
-    flash("Files uploaded successfully!", "success")
     return redirect(url_for('index'))
 
 

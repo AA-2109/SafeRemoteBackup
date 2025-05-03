@@ -14,5 +14,7 @@ folders_dict = {
 
 
 path_to_upload = f'/app/static/uploads'
+path_to_upload_logfile=f"{path_to_upload}/upload.log"
+path_to_failed_logfile=f"{path_to_upload}/failed_upload.log"
 hash_algo = 'md5'
 strong_password = "HelloWorld123!"
