@@ -27,7 +27,12 @@ def hash_file(path, algo=hash_algo):
     return h.hexdigest()
 
 
+def get_relative_filepath(filepath):
+    relative_path_str = filepath.split("/")[3:]
+    return f"{app.UPLOAD_DIR}"+"/".join(relative_path_str)
+
+
 def update_logfile(filepath):
     logfile=f"{path_to_upload}/upload_log.log"
     with open(logfile, "a") as log:
-        log.write(f"{str(datetime.now().ctime())} -- {filepath} -- {hash_file(filepath)}\n")
+        log.write(f"{str(datetime.now().ctime())} -- {get_relative_filepath(filepath)} -- {hash_file(filepath)}\n")

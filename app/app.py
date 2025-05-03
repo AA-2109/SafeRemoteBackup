@@ -11,12 +11,14 @@ from werkzeug.utils import secure_filename
 
 # Directory inside container, mapped to D:\uploads on the host
 UPLOAD_FOLDER = settings.path_to_upload
+UPLOAD_DIR = os.getenv('UPLOAD_DIR')
+HOST_IP = os.getenv('HOST_IP')
 # Directories structure
 DICT_STRUCT = settings.folders_dict
 #TLS ciphers
 STRONG_PASSWORD = settings.strong_password
 STRONG_SECRET = os.urandom(24)
-HOST_IP = os.getenv('HOST_IP')
+
 
 #App init
 app = Flask(__name__)
@@ -131,6 +133,6 @@ def logout():
 
 if __name__ == '__main__':
     utils.create_folders(DICT_STRUCT.keys(), UPLOAD_FOLDER)
-    app.run(ssl_context=context, host="0.0.0.0", port=5000)
+    app.run(ssl_context=context, host=f"{HOST_IP}", port=5000)
 
 
