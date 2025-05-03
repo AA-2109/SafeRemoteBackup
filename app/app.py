@@ -102,10 +102,9 @@ def upload_file():
 
     if not files:
         return "No files selected", 400
-
-    uploaded_files = []
     
     try:
+        uploaded_files = []
         for file in files:
             if file.filename == '':
                 continue
