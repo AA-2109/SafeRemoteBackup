@@ -36,3 +36,7 @@ def update_logfile(filepath: str, path_to_logfile: str, success: bool, e: Except
     message = hash_file(filepath) if success else f"upload failed with {e}" 
     with open(path_to_logfile, "a") as log:
         log.write(f"{str(datetime.now().ctime())} -- {get_relative_filepath(filepath)} -- {message}\n")
+
+
+def is_db_exists(path_to_db):
+    return os.path.isfile(path_to_db)

@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     gcc \
     libjpeg-dev \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
