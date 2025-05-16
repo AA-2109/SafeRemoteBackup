@@ -118,7 +118,7 @@ def upload_file():
                 while chunk := file.stream.read(4096):
                     f.write(chunk)
             hash = utils.hash_file(filepath)
-            database.add_data_to_db(filepath, settings.path_to_upload_logfile, hash)
+            database.add_data_to_db(filename, filepath, hash)
             utils.update_logfile(filepath, settings.path_to_upload_logfile, hash)
             uploaded_files.append(filename)
     
