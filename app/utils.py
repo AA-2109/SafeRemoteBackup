@@ -29,7 +29,7 @@ def hash_file(filepath: str, algo: str = hash_algo):
 
 def get_relative_filepath(filepath: str):
     relative_path_str = filepath.split("/")[3:]
-    return relative_path_str
+    return "/".join(relative_path_str)
 
 
 def update_logfile(filepath: str, path_to_logfile: str, hash: str):
