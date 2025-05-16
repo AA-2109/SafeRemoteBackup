@@ -14,13 +14,24 @@ def run_query(query):
     except sqlite3.OperationalError as e:
         print("Failed to create table:", e)
 
+def run_query_with_params(query, params):
+    try:
+        with sqlite3.connect(settings.path_to_db) as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            conn.commit()
+            print("Data inserted successfully.")
+    except sqlite3.OperationalError as e:
+        print("Failed to execute query:", e)
+
+
 def is_db_exists(path_to_db):
     return os.path.isfile(path_to_db)
 
 def create_db():
     try:
         if not is_db_exists(settings.path_to_db):
-            with open(os.path.join(settings.path_to_db, settings.path_to_db), 'w') as db_file:
+            with open(settings.path_to_db, 'w') as db_file:
                 return True
     except Exception as e:
         return False
@@ -32,7 +43,7 @@ def create_table():
                 name text NOT NULL,
                 path text NOT NULL, 
                 hash text NOT NULL, 
-                date_of_upload DATE
+                date_of_upload TEXT
             );"""
         run_query(sql_statements)
         return True
@@ -40,10 +51,10 @@ def create_table():
         return False
 
 def add_data_to_db(name, path, hash):
-        # insert table statement
-        query = f''' INSERT INTO files(name, path, hash, date_of_upload)
-                  VALUES({name}, {path}, {hash}, {str(datetime.now().ctime())}) '''
-        run_query(query)
+    query = '''INSERT INTO files(name, path, hash, date_of_upload)
+               VALUES (?, ?, ?, ?)'''
+    run_query_with_params(query, (name, path, hash, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+
         
 def prepare_database():
     if not create_db():
