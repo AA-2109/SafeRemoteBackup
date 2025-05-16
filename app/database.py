@@ -2,8 +2,6 @@ from datetime import datetime
 import os
 import sqlite3
 import settings
-import utils
-
 
 
 def run_query(query):
@@ -42,7 +40,6 @@ def create_table():
         return False
 
 def add_data_to_db(name, path, hash):
-    with sqlite3.connect(settings.path_to_db) as conn:
         # insert table statement
         query = f''' INSERT INTO files(name,type,hash, date_of_upload)
                   VALUES({str(datetime.now().ctime())},{name},{path},{hash}) '''
