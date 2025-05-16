@@ -28,7 +28,7 @@ def create_db():
 def create_table():
     try:
         sql_statements = """CREATE TABLE IF NOT EXISTS files (
-                id INTEGER PRIMARY KEY, 
+                id INTEGER PRIMARY KEY , 
                 name text NOT NULL,
                 path text NOT NULL, 
                 hash text NOT NULL, 
@@ -41,8 +41,8 @@ def create_table():
 
 def add_data_to_db(name, path, hash):
         # insert table statement
-        query = f''' INSERT INTO files(name,type,hash, date_of_upload)
-                  VALUES({str(datetime.now().ctime())},{name},{path},{hash}) '''
+        query = f''' INSERT INTO files(name, path, hash, date_of_upload)
+                  VALUES({name}, {path}, {hash}, {str(datetime.now().ctime())}) '''
         run_query(query)
         
 def prepare_database():
