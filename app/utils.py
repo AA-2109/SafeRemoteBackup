@@ -32,11 +32,6 @@ def get_relative_filepath(filepath: str):
     return f"{app.UPLOAD_DIR}"+"/".join(relative_path_str)
 
 
-def update_logfile(filepath: str, path_to_logfile: str, success: bool, e: Exception = None):
-    message = hash_file(filepath) if success else f"upload failed with {e}" 
+def update_logfile(filepath: str, path_to_logfile: str, hash: str):
     with open(path_to_logfile, "a") as log:
-        log.write(f"{str(datetime.now().ctime())} -- {get_relative_filepath(filepath)} -- {message}\n")
-
-
-def is_db_exists(path_to_db):
-    return os.path.isfile(path_to_db)
+        log.write(f"{str(datetime.now().ctime())} -- {get_relative_filepath(filepath)} -- {hash}\n")

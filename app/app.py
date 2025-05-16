@@ -7,6 +7,7 @@ from flask import Flask, request, render_template, redirect, url_for, session, f
 from flask_bcrypt import Bcrypt
 import settings
 from werkzeug.utils import secure_filename
+import database
 
 
 # Directory inside container, mapped to D:\uploads on the host
@@ -116,7 +117,9 @@ def upload_file():
                 file.stream.seek(0)
                 while chunk := file.stream.read(4096):
                     f.write(chunk)
-            utils.update_logfile(filepath, settings.path_to_upload_logfile, True)
+            hash = utils.hash_file(filepath)
+            database.add_data_to_db(filepath, settings.path_to_upload_logfile, hash)
+            utils.update_logfile(filepath, settings.path_to_upload_logfile, hash)
             uploaded_files.append(filename)
     
     except Exception as e:
@@ -136,6 +139,7 @@ def logout():
 
 if __name__ == '__main__':
     utils.create_folders(DICT_STRUCT.keys(), UPLOAD_FOLDER)
+    database.prepare_database()
     app.run(ssl_context=context, host=f"{HOST_IP}", port=5000)
 
 
