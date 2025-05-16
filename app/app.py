@@ -123,7 +123,7 @@ def upload_file():
             uploaded_files.append(filename)
     
     except Exception as e:
-        utils.update_logfile(filepath, settings.path_to_failed_logfile, False, e)
+        utils.update_logfile(filepath, settings.path_to_failed_logfile)
     
     if not uploaded_files:
         return "No valid files uploaded", 400
