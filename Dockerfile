@@ -1,5 +1,5 @@
-# Base image
-FROM python:3.11-slim-bookworm
+# Base image for 32-bit ARM (Raspberry Pi)
+FROM python:3.11-slim
 
 # Install pre-compiled C libraries and python-pillow binaries
 RUN apt-get update && apt-get install -y --no-install-recommends \
