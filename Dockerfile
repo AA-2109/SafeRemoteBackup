@@ -1,11 +1,13 @@
 # Base image
-FROM python:3.13.3-slim
+FROM python:3.11-slim-bookworm
 
-#Install dependendencies
-RUN apt-get update && apt-get install -y \
+# Install pre-compiled C libraries and python-pillow binaries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pillow \
+    python3-dev \
+    libjpeg62-turbo-dev \
     zlib1g-dev \
     gcc \
-    libjpeg-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -15,9 +17,8 @@ WORKDIR /app
 COPY app/ /app/
 COPY requirements.txt /app/requirements.txt
 
-# Install Flask
-RUN pip install --no-cache-dir -r requirements.txt
-
+# Install dependencies using pre-compiled wheels
+RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
 
 # Ensure the upload folder is writable
 RUN mkdir -p /app/static/uploads && chmod -R 755 /app/static/uploads
